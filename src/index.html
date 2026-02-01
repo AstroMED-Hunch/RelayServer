@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>kiosk</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="">
+    </head>
+    <body>
+        <p>database lookup here</p>
+
+        <!-- Dialogs -->
+        <div id="boxEnterConfirmationDiag" class="dialog">
+            <div id="boxEnterConfirmationDiagContent" class="dialogContent">
+                <p id="boxEnterConfirmationDiagText">An unregistered box has entered the camera, would you like to register?</p>
+                <img id="boxEnterConfirmationDiagImg" src="" alt="Box Image" width="400", height="300">
+                <button id="boxEnterConfirmationDiagBtnYes">Yes</button>
+                <button id="boxEnterConfirmationDiagBtnNo">No</button>
+            </div>
+        </div>
+
+        <div id="multiBoxWarningDiag" class="dialog">
+            <div id="multiBoxWarningDiagContent" class="dialogContent">
+                <p id="multiBoxWarningDiagText">Multiple boxes detected! Please ensure only one new box is in the camera view.</p>
+            </div>
+        </div>
+        
+        <link rel="stylesheet" href="index.css">
+        <script src="index.js" async defer></script>
+    </body>
+</html>
