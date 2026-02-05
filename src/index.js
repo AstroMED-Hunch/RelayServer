@@ -5,6 +5,20 @@ const confirmYesButton = document.getElementById('boxEnterConfirmationDiagBtnYes
 const confirmNoButton = document.getElementById('boxEnterConfirmationDiagBtnNo');
 const diag = document.getElementById('boxEnterConfirmationDiag');
 const multiBoxDiag = document.getElementById('multiBoxWarningDiag');
+const boxLocationDiag = document.getElementById('boxLocationDiag');
+const boxLocationDiagText = document.getElementById('boxLocationDiagText');
+const boxLocationDiagBtnClose = document.getElementById('boxLocationDiagBtnClose');
+
+boxLocationDiagBtnClose.addEventListener('click', () => {
+    boxLocationDiag.style.display = 'none';
+});
+
+boxLocationDiag.style.display = 'none';
+
+function showBoxLocation(location) {
+    boxLocationDiagText.textContent = `Box location: ${location}`;
+    boxLocationDiag.style.display = 'block';
+}
 
 let messageBoxVisiblity = false;
 
@@ -49,5 +63,10 @@ socket.addEventListener('message', function (event) {
     else if (dataJson.type === 'boxEnterCancel') {
         messageBoxVisiblity = false;
         updateMsgBoxVisibility();
+    }
+    else if (dataJson.type === 'boxLocation') {
+        const location = dataJson.message;
+        showBoxLocation(location);
+        console.log(`box location received from app: ${location}`);
     }
 });

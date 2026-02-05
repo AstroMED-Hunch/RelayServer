@@ -58,6 +58,12 @@ wsApplication.on('connection', (socket) => {
             console.log('box registration request from kiosk');
             submitMsgToApp.dispatch('registerBox', null, "app");
         }
+        else if (dataJson.type == "boxLocation") {
+            if (isKiosk) return;
+            const msg = dataJson.msg;
+            console.log('box location from app');
+            submitMsgToApp.dispatch('boxLocation', msg, "kiosk");
+        }
     });
 
     submitMsgToApp.add((type, msg, recipient) => {
