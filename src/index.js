@@ -1,6 +1,8 @@
-const socket = new WebSocket('ws://' + window.location.host);
+const socket = new WebSocket(`ws://${window.location.host}`);
 let systemStatus = "idle";
+let messageBoxVisibility = false;
 
+// elements
 const confirmYesButton = document.getElementById('boxEnterConfirmationDiagBtnYes');
 const confirmNoButton = document.getElementById('boxEnterConfirmationDiagBtnNo');
 const diag = document.getElementById('boxEnterConfirmationDiag');
@@ -9,64 +11,86 @@ const boxLocationDiag = document.getElementById('boxLocationDiag');
 const boxLocationDiagText = document.getElementById('boxLocationDiagText');
 const boxLocationDiagBtnClose = document.getElementById('boxLocationDiagBtnClose');
 
-boxLocationDiagBtnClose.addEventListener('click', () => {
-    boxLocationDiag.style.display = 'none';
-});
-
-boxLocationDiag.style.display = 'none';
 
 function showBoxLocation(location) {
     boxLocationDiagText.textContent = `Box location: ${location}`;
     boxLocationDiag.style.display = 'block';
 }
 
-let messageBoxVisiblity = false;
-
 function updateMsgBoxVisibility() {
-    diag.style.display = (messageBoxVisiblity && systemStatus == 'idle') ? 'block' : 'none';
+    diag.style.display = (messageBoxVisibility && systemStatus === 'idle') ? 'block' : 'none';
 }
 
 function showStatusDialog() {
-    if (systemStatus == 'multiple_boxes') {
-        multiBoxDiag.style.display = 'block';
-    } else {
-        multiBoxDiag.style.display = 'none';
-    }
-    
+    multiBoxDiag.style.display = (systemStatus === 'multiple_boxes') ? 'block' : 'none';
 }
 
+
+function sendMessage(type, payload = {}) {
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type, ...payload }));
+    } else {
+        console.warn(`Cannot send message "${type}", WebSocket is not open.`);
+    }
+}
+
+
+boxLocationDiagBtnClose.addEventListener('click', () => {
+    boxLocationDiag.style.display = 'none';
+});
+
 confirmYesButton.addEventListener('click', () => {
-    socket.send(JSON.stringify({ type: 'registerBox' }));
+    sendMessage('registerBox');
+    messageBoxVisibility = false;
+    updateMsgBoxVisibility();
 });
 
-updateMsgBoxVisibility();
-showStatusDialog();
-
-socket.addEventListener('open', function (event) {
-    console.log('kiosk is connected to server');
-    socket.send(JSON.stringify({ type: 'kioskConnected'}));
+confirmNoButton.addEventListener('click', () => {
+    messageBoxVisibility = false;
+    updateMsgBoxVisibility();
 });
 
-socket.addEventListener('message', function (event) {
-    const dataJson = JSON.parse(event.data);
-    if (dataJson.type === 'statusUpdate') {
+const messageHandlers = {
+    statusUpdate: (dataJson) => {
         systemStatus = dataJson.message;
-        console.log(`kiosk new status: ${systemStatus}`);
+        console.log(`Kiosk new status: ${systemStatus}`);
         updateMsgBoxVisibility();
         showStatusDialog();
+    },
+    boxEnterConfirmation: () => {
+        messageBoxVisibility = true;
+        updateMsgBoxVisibility();
+    },
+    boxEnterCancel: () => {
+        messageBoxVisibility = false;
+        updateMsgBoxVisibility();
+    },
+    boxLocation: (dataJson) => {
+        showBoxLocation(dataJson.message);
+        console.log(`Box location received from app: ${dataJson.message}`);
+    }
+};
 
-    }
-    else if (dataJson.type === 'boxEnterConfirmation') {
-        messageBoxVisiblity = true;
-        updateMsgBoxVisibility();
-    }
-    else if (dataJson.type === 'boxEnterCancel') {
-        messageBoxVisiblity = false;
-        updateMsgBoxVisibility();
-    }
-    else if (dataJson.type === 'boxLocation') {
-        const location = dataJson.message;
-        showBoxLocation(location);
-        console.log(`box location received from app: ${location}`);
+socket.addEventListener('open', () => {
+    console.log('Kiosk is connected to server');
+    sendMessage('kioskConnected');
+});
+
+socket.addEventListener('message', (event) => {
+    try {
+        const dataJson = JSON.parse(event.data);
+        const handler = messageHandlers[dataJson.type];
+
+        if (handler) {
+            handler(dataJson);
+        } else {
+            console.warn(`Unknown message type received: ${dataJson.type}`);
+        }
+    } catch (error) {
+        console.error("Failed to parse incoming WebSocket message:", error);
     }
 });
+
+boxLocationDiag.style.display = 'none';
+updateMsgBoxVisibility();
+showStatusDialog();

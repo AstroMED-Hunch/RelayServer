@@ -26,55 +26,66 @@ wsApplication.on('connection', (socket) => {
     let isKiosk = false;
     console.log('connected');
 
-    socket.on('disconnect', () => {
-        console.log('disconnected');
-    });
+    const signalListener = (type, msg, recipient) => {
+        if (recipient === "kiosk" && !isKiosk) return;
+        if (recipient === "app" && isKiosk) return;
+
+        if (socket.readyState === ws.OPEN) {
+            socket.send(JSON.stringify({ type: type, message: msg }));
+        }
+    };
+
+    submitMsgToApp.add(signalListener);
 
     socket.on('message', (data) => {
-        const dataJson = JSON.parse(data);
-        if (dataJson.type === 'statusUpdate') {
-            if (isKiosk) return; // not for kiosk
+        try {
+            const dataJson = JSON.parse(data);
+            const { type } = dataJson;
 
-            systemStatus = dataJson.status;
-            console.log(`new status from app ${systemStatus}`);
-            changeSystemStatus(systemStatus);
-        }
-        else if (dataJson.type === 'kioskConnected') {
-            console.log('kiosk connected');
-            isKiosk = true;
-        }
-        else if (dataJson.type === 'boxEntered') {
-            if (isKiosk) return; // not for kiosk
-            console.log('box entered shelf reported by app');
-            submitMsgToApp.dispatch('boxEnterConfirmation', null, "kiosk"); // forward to kiosks
-        }
-        else if (dataJson.type === 'boxExited') {
-            if (isKiosk) return;
-            console.log('box exit confirmation response from app');
-            submitMsgToApp.dispatch('boxEnterCancel', dataJson.response, "kiosk"); // forward to kiosks
-        }
-        else if (dataJson.type === 'registerBox') {
-            if (!isKiosk) return;
-            console.log('box registration request from kiosk');
-            submitMsgToApp.dispatch('registerBox', null, "app");
-        }
-        else if (dataJson.type == "boxLocation") {
-            if (isKiosk) return;
-            const msg = dataJson.msg;
-            console.log('box location from app');
-            submitMsgToApp.dispatch('boxLocation', msg, "kiosk");
-        }
-    });
+            if (type === 'kioskConnected') {
+                console.log('kiosk connected');
+                isKiosk = true;
+                return;
+            }
 
-    submitMsgToApp.add((type, msg, recipient) => {
-        if (recipient == "kiosk" && !isKiosk) return;
-        if (recipient == "app" && isKiosk) return;
-        socket.send(JSON.stringify({ type: type, message: msg }));
+            if (isKiosk) {
+                if (type === 'registerBox') {
+                    console.log('box registration request from kiosk');
+                    submitMsgToApp.dispatch('registerBox', null, "app");
+                }
+            } else {
+                switch (type) {
+                    case 'statusUpdate':
+                        systemStatus = dataJson.status;
+                        console.log(`new status from app ${systemStatus}`);
+                        changeSystemStatus(systemStatus);
+                        break;
+                    case 'boxEntered':
+                        console.log('box entered shelf reported by app');
+                        submitMsgToApp.dispatch('boxEnterConfirmation', null, "kiosk");
+                        break;
+                    case 'boxExited':
+                        console.log('box exit confirmation response from app');
+                        submitMsgToApp.dispatch('boxEnterCancel', dataJson.response, "kiosk");
+                        break;
+                    case 'boxLocation':
+                        console.log('box location from app');
+                        submitMsgToApp.dispatch('boxLocation', dataJson.msg, "kiosk");
+                        break;
+                }
+            }
+        } catch (e) {
+            console.error("Invalid JSON received");
+        }
     });
 
     socket.on('close', () => {
         console.log('socket closed - removing signal binding');
-        socket.close();
+        submitMsgToApp.remove(signalListener);
+    });
+
+    socket.on('error', (err) => {
+        console.error("WebSocket error:", err);
     });
 });
 
