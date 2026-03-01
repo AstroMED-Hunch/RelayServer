@@ -47,10 +47,8 @@ wsApplication.on('connection', (socket) => {
             }
 
             if (isKiosk) {
-                if (type === 'registerBox') {
                     console.log('box registration request from kiosk');
-                    submitMsgToApp.dispatch('registerBox', null, "app");
-                }
+                    submitMsgToApp.dispatch(dataJson.type, dataJson.message.toString(), "app");
             } else {
                 switch (type) {
                     case 'statusUpdate':
