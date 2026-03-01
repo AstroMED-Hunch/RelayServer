@@ -60,7 +60,7 @@ wsApplication.on('connection', (socket) => {
                         break;
                     case 'boxEntered':
                         console.log('box entered shelf reported by app');
-                        submitMsgToApp.dispatch('boxEnterConfirmation', null, "kiosk");
+                        submitMsgToApp.dispatch('boxEnterConfirmation', dataJson.message, "kiosk");
                         break;
                     case 'boxExited':
                         console.log('box exit confirmation response from app');
