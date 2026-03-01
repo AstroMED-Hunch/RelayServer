@@ -68,7 +68,15 @@ wsApplication.on('connection', (socket) => {
                         break;
                     case 'boxLocation':
                         console.log('box location from app');
-                        submitMsgToApp.dispatch('boxLocation', dataJson.msg, "kiosk");
+                        submitMsgToApp.dispatch('boxLocation', dataJson.msg, "kiosk"); // TODO: fix our message consistency
+                        break;
+                    case 'boxUpdate':
+                        console.log('box update from app');
+                        submitMsgToApp.dispatch('boxUpdate', dataJson.message, "kiosk");
+                        break;
+                    case "faceRecognitionUpdate":
+                        console.log('face recognition update from app');
+                        submitMsgToApp.dispatch('faceRecognitionUpdate', dataJson.message, "kiosk");
                         break;
                 }
             }
