@@ -96,8 +96,3 @@ The main server logic is contained in `main.js`. The server:
 - **Connection Refused**: Make sure the server is running and listening on the correct port
 - **Invalid JSON**: The server will log an error if it receives malformed JSON; check your client code
 - **Messages Not Received**: Verify that you're using the correct recipient field in your message routing logic
-
-## License
-
-ISC
-
