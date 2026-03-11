@@ -6,7 +6,7 @@ const {Signal} = require('signals');
 
 const app = express();
 const server = http.createServer(app);
-const wsApplication = new ws.Server({ server });
+const wsApplication = new ws.Server({server});
 
 const PORT = process.env.PORT || 3000;
 
@@ -17,19 +17,19 @@ let systemStatus = "idle";
 function changeSystemStatus(newStatus) {
     systemStatus = newStatus;
     console.log(`system status changed to: ${systemStatus}`);
-    submitMsgToApp.dispatch('statusUpdate', systemStatus, "kiosk");
+
+    submitMsgToApp.dispatch({type: 'statusUpdate', message: systemStatus}, "kiosk");
 }
 
 wsApplication.on('connection', (socket) => {
     let isKiosk = false;
     console.log('connected');
-
-    const signalListener = (type, msg, recipient) => {
+    const signalListener = (payload, recipient) => {
         if (recipient === "kiosk" && !isKiosk) return;
         if (recipient === "app" && isKiosk) return;
 
         if (socket.readyState === ws.OPEN) {
-            socket.send(JSON.stringify({ type: type, message: msg }));
+            socket.send(JSON.stringify(payload));
         }
     };
 
@@ -38,7 +38,7 @@ wsApplication.on('connection', (socket) => {
     socket.on('message', (data) => {
         try {
             const dataJson = JSON.parse(data);
-            const { type } = dataJson;
+            const {type} = dataJson;
 
             if (type === 'kioskConnected') {
                 console.log('kiosk connected');
@@ -47,8 +47,8 @@ wsApplication.on('connection', (socket) => {
             }
 
             if (isKiosk) {
-                    console.log('box registration request from kiosk');
-                    submitMsgToApp.dispatch(dataJson.type, dataJson.message.toString(), "app");
+                console.log(`message from kiosk: ${type}`);
+                submitMsgToApp.dispatch(dataJson, "app");
             } else {
                 switch (type) {
                     case 'statusUpdate':
@@ -58,31 +58,39 @@ wsApplication.on('connection', (socket) => {
                         break;
                     case 'boxEntered':
                         console.log('box entered shelf reported by app');
-                        submitMsgToApp.dispatch('boxEntered', dataJson.message, "kiosk");
+                        submitMsgToApp.dispatch({type: 'boxEntered', message: dataJson.message}, "kiosk");
                         break;
                     case 'boxExited':
                         console.log('box exit confirmation response from app');
-                        submitMsgToApp.dispatch('boxExited', dataJson.response, "kiosk");
+                        submitMsgToApp.dispatch({type: 'boxExited', message: dataJson.message}, "kiosk");
                         break;
                     case 'boxLocation':
                         console.log('box location from app');
-                        submitMsgToApp.dispatch('boxLocation', dataJson.msg, "kiosk"); // TODO: fix our message consistency
+                        submitMsgToApp.dispatch({
+                            type: 'boxLocation',
+                            message: dataJson.msg,
+                            pills: dataJson.pills
+                        }, "kiosk");
                         break;
                     case 'boxUpdate':
                         console.log('box update from app');
-                        submitMsgToApp.dispatch('boxUpdate', dataJson.message, "kiosk");
+                        submitMsgToApp.dispatch({type: 'boxUpdate', message: dataJson.box_code_id}, "kiosk");
                         break;
                     case "faceRecognitionUpdate":
                         console.log('face recognition update from app');
-                        submitMsgToApp.dispatch('faceRecognitionUpdate', dataJson.message, "kiosk");
+                        submitMsgToApp.dispatch({type: 'faceRecognitionUpdate', message: dataJson.message}, "kiosk");
                         break;
                     case "pillScanResult":
                         console.log('pill scan result from app');
-                        submitMsgToApp.dispatch('pillScanResult', dataJson.pills, "kiosk");
+                        submitMsgToApp.dispatch({type: 'pillScanResult', pills: dataJson.pills}, "kiosk");
+                        break;
+                    default:
+                        console.log(`Unhandled message type from app: ${type}`);
+                        break;
                 }
             }
         } catch (e) {
-            console.error("Invalid JSON received");
+            console.error("Invalid JSON received or error processing message:", e);
         }
     });
 
