@@ -76,6 +76,9 @@ wsApplication.on('connection', (socket) => {
                         console.log('face recognition update from app');
                         submitMsgToApp.dispatch('faceRecognitionUpdate', dataJson.message, "kiosk");
                         break;
+                    case "pillScanResult":
+                        console.log('pill scan result from app');
+                        submitMsgToApp.dispatch('pillScanResult', dataJson.pills, "kiosk");
                 }
             }
         } catch (e) {
